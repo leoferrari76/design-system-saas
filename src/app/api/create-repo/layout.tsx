@@ -1,5 +1,10 @@
 import './globals.css'
 
+export const metadata = {
+  title: 'Design System SaaS',
+  description: 'Gerador automático de Design Systems',
+}
+
 export default function RootLayout({
   children,
 }: {

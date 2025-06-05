@@ -1,692 +1,485 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Copy, GitBranch, Download, Palette } from "lucide-react"
+import { Download, GitBranch, Palette, ExternalLink } from 'lucide-react'
 
-export default function DesignSystemMVP() {
+export default function DesignSystemSaaS() {
+  const [clientName, setClientName] = useState('')
   const [colors, setColors] = useState({
-    primary: '#1a1a1a',
-    secondary: '#6b7280',
-    accent: '#3b82f6',
-    muted: '#f3f4f6',
+    primary: '#3b82f6',
+    secondary: '#8b5cf6',
+    accent: '#10b981',
+    muted: '#f3f4f6'
   })
-
-  const [clientName, setClientName] = useState('Cliente Exemplo')
-  const [activeTab, setActiveTab] = useState('config')
-
-  const updateColor = (colorKey: string, hexValue: string) => {
-    setColors(prev => ({
-      ...prev,
-      [colorKey]: hexValue
-    }))
-  }
-
-  // Função para converter hex para HSL
-  const hexToHsl = (hex: string) => {
-    if (!hex.startsWith('#') || hex.length !== 7) return null
-    
-    const r = parseInt(hex.slice(1, 3), 16) / 255
-    const g = parseInt(hex.slice(3, 5), 16) / 255
-    const b = parseInt(hex.slice(5, 7), 16) / 255
-
-    const max = Math.max(r, g, b)
-    const min = Math.min(r, g, b)
-    let h = 0, s = 0, l = (max + min) / 2
-
-    if (max !== min) {
-      const d = max - min
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break
-        case g: h = (b - r) / d + 2; break
-        case b: h = (r - g) / d + 4; break
-      }
-      h /= 6
-    }
-
-    return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`
-  }
+  const [isCreatingRepo, setIsCreatingRepo] = useState(false)
+  const [isCloning, setIsCloning] = useState(false)
+  const [isDeploying, setIsDeploying] = useState(false)
+  const [lastCreatedRepo, setLastCreatedRepo] = useState<any>(null)
+  const [lastLocalSetup, setLastLocalSetup] = useState<any>(null)
+  const [lastDeployment, setLastDeployment] = useState<any>(null)
 
   const exportTheme = () => {
-    const cssVariables = Object.entries(colors)
-      .map(([key, hexValue]) => {
-        const hslValue = hexToHsl(hexValue)
-        return `  --${key}: ${hslValue};`
-      })
-      .join('\n')
-    
-    const cssContent = `:root {\n${cssVariables}\n  --primary-foreground: 0 0% 98%;\n  --secondary-foreground: 0 0% 9%;\n  --accent-foreground: 0 0% 98%;\n  --muted-foreground: 0 0% 45%;\n}`
-    
+    const cssContent = `/* Design System CSS - ${clientName} */
+
+:root {
+  --primary: ${colors.primary};
+  --secondary: ${colors.secondary};
+  --accent: ${colors.accent};
+  --muted: ${colors.muted};
+}
+
+/* Botões */
+.btn-primary {
+  background-color: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.btn-accent {
+  background-color: var(--accent);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+/* Cards */
+.card {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Inputs */
+.input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}`
+
     const blob = new Blob([cssContent], { type: 'text/css' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${clientName.toLowerCase().replace(/\s+/g, '-')}-theme.css`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${clientName.toLowerCase().replace(/\s+/g, '-')}-design-system.css`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
+  // Função para criar repositório simples (GitHub Pages)
   const createGitRepository = async () => {
-    // Simula criação de repositório Git
-    const repoName = clientName.toLowerCase().replace(/\s+/g, '-')
-    const commands = [
-      `git clone https://github.com/seu-usuario/design-system-template.git ${repoName}`,
-      `cd ${repoName}`,
-      `git remote rename origin template`,
-      `git remote add origin https://github.com/seu-usuario/${repoName}.git`,
-      `# Configure as cores personalizadas`,
-      `echo '${JSON.stringify(colors, null, 2)}' > theme-config.json`,
-      `git add .`,
-      `git commit -m "feat: configuração inicial para ${clientName}"`,
-      `git push -u origin main`
-    ]
+    if (!clientName.trim()) {
+      alert('Por favor, digite o nome do cliente')
+      return
+    }
 
-    const commandsText = commands.join('\n')
+    setIsCreatingRepo(true)
     
-    const blob = new Blob([commandsText], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `setup-${repoName}.sh`
-    a.click()
-
-    alert(`Repositório "${repoName}" configurado! Execute o script baixado para criar o repositório.`)
+    try {
+      const response = await fetch('/api/create-repo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientName, colors })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setLastCreatedRepo(result)
+        alert(`✅ Design System criado!\n\n🌐 Página: ${result.previewUrl}\n📂 Repo: ${result.repoUrl}`)
+      } else {
+        alert(`❌ Erro: ${result.error}`)
+      }
+    } catch (error: any) {
+      alert(`💥 Erro: ${error.message}`)
+    } finally {
+      setIsCreatingRepo(false)
+    }
   }
 
-  // Função para determinar cor do texto baseada no background
-  const getTextColor = (hexColor: string) => {
-    const r = parseInt(hexColor.slice(1, 3), 16)
-    const g = parseInt(hexColor.slice(3, 5), 16)
-    const b = parseInt(hexColor.slice(5, 7), 16)
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000
-    return brightness > 128 ? '#000000' : '#ffffff'
+  // Função para clone local
+  const cloneAndRunLocal = async () => {
+    if (!clientName.trim()) {
+      alert('Por favor, digite o nome do cliente')
+      return
+    }
+
+    setIsCloning(true)
+    
+    try {
+      const response = await fetch('/api/clone-local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientName, colors })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setLastLocalSetup(result)
+        alert(`✅ Template preparado!\n\nEm produção seria:\n1. Download do ZIP\n2. cd ${result.folderName}\n3. npm install && npm run dev\n4. localhost:3000\n\n(Demo: ${result.message})`)
+      } else {
+        alert(`❌ Erro: ${result.error}`)
+      }
+    } catch (error: any) {
+      alert(`💥 Erro: ${error.message}`)
+    } finally {
+      setIsCloning(false)
+    }
   }
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
-    alert('Código copiado para a área de transferência!')
-  }
+  // Função para deploy no Vercel
+  const deployToVercel = async () => {
+    if (!clientName.trim()) {
+      alert('Por favor, digite o nome do cliente')
+      return
+    }
 
-  // Códigos dos componentes
-  const buttonCode = `// Button Component
-const Button = ({ variant = 'primary', children, ...props }) => {
-  const styles = {
-    primary: {
-      backgroundColor: '${colors.primary}',
-      color: '${getTextColor(colors.primary)}',
-      border: 'none'
-    },
-    secondary: {
-      backgroundColor: '${colors.secondary}',
-      color: '${getTextColor(colors.secondary)}',
-      border: 'none'
-    },
-    outline: {
-      backgroundColor: 'transparent',
-      color: '${colors.primary}',
-      border: \`2px solid ${colors.primary}\`
+    setIsDeploying(true)
+    
+    try {
+      const response = await fetch('/api/deploy-vercel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientName, colors })
+      })
+      
+      const result = await response.json()
+      
+      if (result.success) {
+        setLastDeployment(result)
+        alert(`🚀 Deploy realizado!\n\n🌐 URL Live: ${result.liveUrl}\n📂 Repo: ${result.repoUrl}\n\nO site estará disponível em 1-2 minutos!`)
+      } else {
+        alert(`❌ Erro: ${result.error}`)
+      }
+    } catch (error: any) {
+      alert(`💥 Erro: ${error.message}`)
+    } finally {
+      setIsDeploying(false)
     }
   }
 
   return (
-    <button
-      style={{
-        ...styles[variant],
-        padding: '8px 16px',
-        borderRadius: '6px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'all 0.2s'
-      }}
-      {...props}
-    >
-      {children}
-    </button>
-  )
-}`
-
-  const cardCode = `// Card Component
-const Card = ({ children, ...props }) => {
-  return (
-    <div
-      style={{
-        backgroundColor: '${colors.muted}',
-        border: \`1px solid ${colors.secondary}40\`,
-        borderRadius: '8px',
-        padding: '16px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-      }}
-      {...props}
-    >
-      {children}
-    </div>
-  )
-}`
-
-  const inputCode = `// Input Component
-const Input = ({ ...props }) => {
-  return (
-    <input
-      style={{
-        width: '100%',
-        padding: '8px 12px',
-        border: \`1px solid ${colors.secondary}80\`,
-        borderRadius: '6px',
-        fontSize: '14px',
-        transition: 'border-color 0.2s, box-shadow 0.2s'
-      }}
-      onFocus={(e) => {
-        e.target.style.borderColor = '${colors.accent}'
-        e.target.style.boxShadow = \`0 0 0 2px ${colors.accent}20\`
-      }}
-      onBlur={(e) => {
-        e.target.style.borderColor = '${colors.secondary}80'
-        e.target.style.boxShadow = 'none'
-      }}
-      {...props}
-    />
-  )
-}`
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header Fixo */}
-      <div className="bg-white border-b border-gray-200 px-8 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Design System SaaS</h1>
-            <p className="text-sm text-gray-600">Cliente: {clientName}</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={exportTheme}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Download size={16} />
-              Exportar CSS
-            </button>
-            <button
-              onClick={createGitRepository}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <GitBranch size={16} />
-              Criar Repositório
-            </button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {(lastCreatedRepo || lastLocalSetup || lastDeployment) && (
+        <div className="bg-green-50 border-b border-green-200 px-8 py-3">
+          <div className="max-w-7xl mx-auto">
+            {lastCreatedRepo && (
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-700 font-medium">✅ Design System Simples:</span>
+                  <span className="text-green-600">{lastCreatedRepo.clientName}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => window.open(lastCreatedRepo.repoUrl, '_blank')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-white text-green-700 border border-green-300 rounded hover:bg-green-50 transition-colors"
+                  >
+                    <GitBranch size={14} />
+                    Ver Repositório
+                  </button>
+                  <button
+                    onClick={() => window.open(lastCreatedRepo.previewUrl, '_blank')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    Ver Página
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {lastLocalSetup && (
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-purple-700 font-medium">💻 Setup Local:</span>
+                  <span className="text-purple-600">{lastLocalSetup.clientName}</span>
+                </div>
+                <div className="text-sm text-purple-600">
+                  Executar: cd {lastLocalSetup.folderName} && npm install && npm run dev
+                </div>
+              </div>
+            )}
+            
+            {lastDeployment && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-orange-700 font-medium">🚀 Deploy Live:</span>
+                  <span className="text-orange-600">{lastDeployment.clientName}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => window.open(lastDeployment.repoUrl, '_blank')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-white text-orange-700 border border-orange-300 rounded hover:bg-orange-50 transition-colors"
+                  >
+                    <GitBranch size={14} />
+                    Ver Código
+                  </button>
+                  <button
+                    onClick={() => window.open(lastDeployment.liveUrl, '_blank')}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    Ver Site Live
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Navegação */}
-      <div className="bg-white border-b border-gray-200 px-8">
+      <div className="px-8 py-12">
         <div className="max-w-7xl mx-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 bg-gray-100">
-              <TabsTrigger value="config" className="flex items-center gap-2">
-                <Palette size={16} />
-                Configuração
-              </TabsTrigger>
-              <TabsTrigger value="buttons">Botões</TabsTrigger>
-              <TabsTrigger value="cards">Cards</TabsTrigger>
-              <TabsTrigger value="forms">Formulários</TabsTrigger>
-              <TabsTrigger value="palette">Paleta</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
-      </div>
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <Palette className="w-8 h-8 text-blue-600" />
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent">
+                Design System SaaS
+              </h1>
+            </div>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Gerador automático de Design Systems white-label para seus clientes
+            </p>
+          </div>
 
-      {/* Conteúdo */}
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Configuração */}
-            <TabsContent value="config">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle>Configuração do Cliente</CardTitle>
-                    <CardDescription>Defina as informações e cores do projeto</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Nome do Cliente */}
-                    <div className="space-y-2">
-                      <Label htmlFor="client-name">Nome do Cliente</Label>
-                      <Input
-                        id="client-name"
-                        value={clientName}
-                        onChange={(e) => setClientName(e.target.value)}
-                        placeholder="Digite o nome do cliente"
-                      />
-                    </div>
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Palette size={20} />
+                  Configuração
+                </h2>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome do Cliente
+                    </label>
+                    <input
+                      type="text"
+                      value={clientName}
+                      onChange={(e) => setClientName(e.target.value)}
+                      placeholder="Ex: Empresa ABC"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
 
-                    {/* Configuração de Cores */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Paleta de Cores</h3>
-                      
-                      {Object.entries(colors).map(([key, value]) => (
-                        <div key={key} className="space-y-2">
-                          <Label htmlFor={key} className="capitalize">{key.replace(/([A-Z])/g, ' $1')}</Label>
-                          <div className="flex gap-2">
-                            <input
-                              id={key}
-                              type="color"
-                              value={value}
-                              onChange={(e) => updateColor(key, e.target.value)}
-                              className="w-16 h-10 border border-gray-300 rounded cursor-pointer"
-                            />
-                            <Input
-                              value={value}
-                              onChange={(e) => updateColor(key, e.target.value)}
-                              placeholder={`#${key}`}
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle>Configurações do Projeto</CardTitle>
-                    <CardDescription>Configurações técnicas e de versionamento</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <h4 className="font-medium mb-2">Estrutura do Repositório</h4>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>📂 design-system-template (repositório pai)</div>
-                        <div>├── 📂 components/</div>
-                        <div>├── 📂 styles/</div>
-                        <div>├── 📄 theme-config.json</div>
-                        <div>└── 📄 README.md</div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium mb-2 text-blue-900">Próximos Passos</h4>
-                      <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                        <li>Configure as cores desejadas</li>
-                        <li>Teste os componentes nas outras abas</li>
-                        <li>Clique em "Criar Repositório" para gerar o projeto</li>
-                        <li>Execute o script baixado no terminal</li>
-                      </ol>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Botões */}
-            <TabsContent value="buttons">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle>Preview - Botões</CardTitle>
-                    <CardDescription>Visualize os botões com as cores aplicadas</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="space-y-4">
-                      <h4 className="font-medium">Variações</h4>
-                      <div className="flex gap-3 flex-wrap">
-                        <button
-                          className="px-4 py-2 rounded-md font-medium transition-colors"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: getTextColor(colors.primary)
-                          }}
-                        >
-                          Primary
-                        </button>
-                        <button
-                          className="px-4 py-2 rounded-md font-medium transition-colors"
-                          style={{
-                            backgroundColor: colors.secondary,
-                            color: getTextColor(colors.secondary)
-                          }}
-                        >
-                          Secondary
-                        </button>
-                        <button
-                          className="px-4 py-2 rounded-md font-medium border-2 transition-colors"
-                          style={{
-                            borderColor: colors.primary,
-                            color: colors.primary,
-                            backgroundColor: 'transparent'
-                          }}
-                        >
-                          Outline
-                        </button>
-                        <button
-                          className="px-4 py-2 rounded-md font-medium transition-colors"
-                          style={{
-                            backgroundColor: colors.accent,
-                            color: getTextColor(colors.accent)
-                          }}
-                        >
-                          Accent
-                        </button>
-                      </div>
-
-                      <h4 className="font-medium">Tamanhos</h4>
-                      <div className="flex gap-3 items-center flex-wrap">
-                        <button
-                          className="px-2 py-1 text-sm rounded font-medium"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: getTextColor(colors.primary)
-                          }}
-                        >
-                          Small
-                        </button>
-                        <button
-                          className="px-4 py-2 rounded-md font-medium"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: getTextColor(colors.primary)
-                          }}
-                        >
-                          Medium
-                        </button>
-                        <button
-                          className="px-6 py-3 text-lg rounded-lg font-medium"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: getTextColor(colors.primary)
-                          }}
-                        >
-                          Large
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Código do Componente
-                      <button
-                        onClick={() => copyToClipboard(buttonCode)}
-                        className="flex items-center gap-1 px-2 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-                      >
-                        <Copy size={14} />
-                        Copiar
-                      </button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                      <code>{buttonCode}</code>
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Cards */}
-            <TabsContent value="cards">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle>Preview - Cards</CardTitle>
-                    <CardDescription>Visualize os cards com as cores aplicadas</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div 
-                      className="p-4 rounded-lg border"
-                      style={{ 
-                        backgroundColor: colors.muted,
-                        borderColor: colors.secondary + '40'
-                      }}
-                    >
-                      <h5 className="font-semibold text-gray-900 mb-2">Card Simples</h5>
-                      <p className="text-sm text-gray-600 mb-3">Este é um exemplo de card básico com as cores personalizadas aplicadas.</p>
-                      <button
-                        className="px-3 py-1.5 text-sm rounded font-medium"
-                        style={{
-                          backgroundColor: colors.accent,
-                          color: getTextColor(colors.accent)
-                        }}
-                      >
-                        Ação
-                      </button>
-                    </div>
-
-                    <div 
-                      className="p-6 rounded-lg border"
-                      style={{ 
-                        backgroundColor: 'white',
-                        borderColor: colors.primary + '20'
-                      }}
-                    >
-                      <div className="flex items-center gap-3 mb-4">
-                        <div 
-                          className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-                          style={{ backgroundColor: colors.primary }}
-                        >
-                          A
-                        </div>
-                        <div>
-                          <h5 className="font-semibold text-gray-900">Card com Avatar</h5>
-                          <p className="text-sm text-gray-500">Exemplo com ícone</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-600 mb-4">Conteúdo do card com avatar personalizado usando as cores do tema.</p>
-                      <div className="flex gap-2">
-                        <button
-                          className="px-3 py-1.5 text-sm rounded border font-medium"
-                          style={{
-                            borderColor: colors.primary,
-                            color: colors.primary
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          className="px-3 py-1.5 text-sm rounded font-medium"
-                          style={{
-                            backgroundColor: colors.primary,
-                            color: getTextColor(colors.primary)
-                          }}
-                        >
-                          Confirmar
-                        </button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Código do Componente
-                      <button
-                        onClick={() => copyToClipboard(cardCode)}
-                        className="flex items-center gap-1 px-2 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-                      >
-                        <Copy size={14} />
-                        Copiar
-                      </button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                      <code>{cardCode}</code>
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Formulários */}
-            <TabsContent value="forms">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle>Preview - Formulários</CardTitle>
-                    <CardDescription>Visualize os campos de formulário</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-                      <input
-                        type="text"
-                        placeholder="Digite seu nome"
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
-                        style={{ borderColor: colors.secondary + '80' }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = colors.accent
-                          e.target.style.boxShadow = `0 0 0 2px ${colors.accent}20`
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = colors.secondary + '80'
-                          e.target.style.boxShadow = 'none'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                      <input
-                        type="email"
-                        placeholder="Digite seu email"
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
-                        style={{ borderColor: colors.secondary + '80' }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = colors.accent
-                          e.target.style.boxShadow = `0 0 0 2px ${colors.accent}20`
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = colors.secondary + '80'
-                          e.target.style.boxShadow = 'none'
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                      <select 
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors"
-                        style={{ borderColor: colors.secondary + '80' }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = colors.accent
-                          e.target.style.boxShadow = `0 0 0 2px ${colors.accent}20`
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = colors.secondary + '80'
-                          e.target.style.boxShadow = 'none'
-                        }}
-                      >
-                        <option value="">Selecione uma opção</option>
-                        <option value="option1">Opção 1</option>
-                        <option value="option2">Opção 2</option>
-                        <option value="option3">Opção 3</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem</label>
-                      <textarea
-                        placeholder="Digite sua mensagem"
-                        rows={4}
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 transition-colors resize-none"
-                        style={{ borderColor: colors.secondary + '80' }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = colors.accent
-                          e.target.style.boxShadow = `0 0 0 2px ${colors.accent}20`
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = colors.secondary + '80'
-                          e.target.style.boxShadow = 'none'
-                        }}
-                      />
-                    </div>
-
-                    <button
-                      className="w-full px-4 py-2 rounded-md font-medium transition-colors"
-                      style={{
-                        backgroundColor: colors.primary,
-                        color: getTextColor(colors.primary)
-                      }}
-                    >
-                      Enviar Formulário
-                    </button>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white">
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      Código do Componente
-                      <button
-                        onClick={() => copyToClipboard(inputCode)}
-                        className="flex items-center gap-1 px-2 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-                      >
-                        <Copy size={14} />
-                        Copiar
-                      </button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm">
-                      <code>{inputCode}</code>
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Paleta */}
-            <TabsContent value="palette">
-              <Card className="bg-white">
-                <CardHeader>
-                  <CardTitle>Paleta de Cores - {clientName}</CardTitle>
-                  <CardDescription>Visualização completa da paleta personalizada</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {Object.entries(colors).map(([key, hexValue]) => (
-                      <div key={key} className="space-y-3">
-                        <div
-                          className="h-32 rounded-lg border flex flex-col items-center justify-center text-center p-4"
-                          style={{ backgroundColor: hexValue }}
-                        >
-                          <div 
-                            className="font-bold text-lg capitalize mb-1"
-                            style={{ 
-                              color: getTextColor(hexValue),
-                              textShadow: '0 0 4px rgba(0,0,0,0.3)'
-                            }}
-                          >
-                            {key}
-                          </div>
-                          <div 
-                            className="text-sm font-mono"
-                            style={{ 
-                              color: getTextColor(hexValue),
-                              textShadow: '0 0 4px rgba(0,0,0,0.3)'
-                            }}
-                          >
-                            {hexValue}
-                          </div>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div><strong>RGB:</strong> {hexValue.slice(1).match(/.{2}/g)?.map(hex => parseInt(hex, 16)).join(', ')}</div>
-                          <div><strong>HSL:</strong> {hexToHsl(hexValue)}</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(colors).map(([key, value]) => (
+                      <div key={key}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                          {key}
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="color"
+                            value={value}
+                            onChange={(e) => setColors(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
+                          />
+                          <input
+                            type="text"
+                            value={value}
+                            onChange={(e) => setColors(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded font-mono"
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 mt-6">
+                <h3 className="font-semibold mb-4">Preview</h3>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <button 
+                      className="px-3 py-2 rounded text-white text-sm font-medium transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: colors.primary }}
+                    >
+                      Primary
+                    </button>
+                    <button 
+                      className="px-3 py-2 rounded text-white text-sm font-medium transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: colors.secondary }}
+                    >
+                      Secondary
+                    </button>
+                  </div>
+                  <div 
+                    className="p-4 rounded-lg border"
+                    style={{ backgroundColor: colors.muted }}
+                  >
+                    <h4 className="font-medium" style={{ color: colors.primary }}>Card Example</h4>
+                    <p className="text-sm text-gray-600 mt-1">Preview do design system</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Ações e Informações */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Botões de Ação */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4">Gerar Design System</h3>
+                
+                <div className="flex gap-3">
+                  <button
+                    onClick={exportTheme}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Download size={16} />
+                    Exportar CSS
+                  </button>
+                  
+                  <button
+                    onClick={cloneAndRunLocal}
+                    disabled={isCloning}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Download size={16} />
+                    {isCloning ? (
+                      <>
+                        <span className="animate-spin">⚙️</span>
+                        Preparando Local...
+                      </>
+                    ) : (
+                      'Clone Local (localhost)'
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={deployToVercel}
+                    disabled={isDeploying}
+                    className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ExternalLink size={16} />
+                    {isDeploying ? (
+                      <>
+                        <span className="animate-spin">⚙️</span>
+                        Deploy Live...
+                      </>
+                    ) : (
+                      'Deploy Live (Vercel)'
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={createGitRepository}
+                    disabled={isCreatingRepo}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <GitBranch size={16} />
+                    {isCreatingRepo ? (
+                      <>
+                        <span className="animate-spin">⚙️</span>
+                        Criando Simples...
+                      </>
+                    ) : (
+                      'Criar Simples (GitHub)'
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Informações sobre as opções */}
+              <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+                <h3 className="text-lg font-semibold mb-4">Design System White Label</h3>
+                <p className="text-gray-600 mb-4">Três formas de criar seu design system</p>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <h4 className="font-medium mb-2 text-purple-900">💻 Clone Local (Recomendado)</h4>
+                    <div className="text-sm text-purple-700 space-y-1">
+                      <div>📁 150+ componentes completos</div>
+                      <div>⚡ Next.js + React + TypeScript</div>
+                      <div>🔧 Totalmente customizável</div>
+                      <div>🏠 Roda em localhost:3000</div>
+                      <div>📦 Download direto do ZIP</div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <h4 className="font-medium mb-2 text-orange-900">🚀 Deploy Live (Vercel)</h4>
+                    <div className="text-sm text-orange-700 space-y-1">
+                      <div>🌐 URL pública em 30 segundos</div>
+                      <div>⚡ Todos os 150+ componentes</div>
+                      <div>📱 Responsivo e otimizado</div>
+                      <div>🔄 Deploy automático</div>
+                      <div>✨ Pronto para cliente acessar</div>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h4 className="font-medium mb-2 text-green-900">📄 Simples (GitHub Pages)</h4>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <div>🌐 HTML + CSS + JS básico</div>
+                      <div>⚡ Componentes essenciais</div>
+                      <div>📱 Responsivo simples</div>
+                      <div>🚀 GitHub Pages automático</div>
+                      <div>💡 Para apresentações rápidas</div>
+                    </div>
+                  </div>
+
+                  {(isCloning || isDeploying || isCreatingRepo) && (
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="flex items-center gap-2 text-yellow-800">
+                        <span className="animate-spin">⚙️</span>
+                        <span className="font-medium">
+                          {isCloning && 'Preparando arquivos para download...'}
+                          {isDeploying && 'Fazendo deploy no Vercel...'}
+                          {isCreatingRepo && 'Criando repositório GitHub...'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-yellow-700 mt-1">
+                        {isCloning && 'Aplicando suas cores e gerando ZIP...'}
+                        {isDeploying && 'Criando repositório e fazendo deploy automático...'}
+                        {isCreatingRepo && 'Gerando arquivos HTML, CSS, JS e ativando Pages...'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
